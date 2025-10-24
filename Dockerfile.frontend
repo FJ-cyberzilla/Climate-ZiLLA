@@ -1,0 +1,74 @@
+# Multi-stage build for maximum security and minimal size
+FROM node:18-alpine AS builder
+
+# Security: Run as non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+# Install security updates
+RUN apk update && apk upgrade && \
+    apk add --no-cache curl
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+COPY vite.config.js ./
+
+# Install dependencies with security audit
+RUN npm ci --only=production --audit=false && \
+    npm audit --production --audit-level=high
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine AS production
+
+# Security: Remove default nginx user
+RUN deluser nginx && \
+    addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+# Install security tools
+RUN apk update && apk upgrade && \
+    apk add --no-cache --virtual .security-deps \
+    curl \
+    openssl
+
+# Copy custom nginx config with security headers
+COPY nginx-security.conf /etc/nginx/nginx.conf
+
+# Copy built application
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy security scripts
+COPY security/ /etc/nginx/security/
+
+# Set proper permissions
+RUN chown -R appuser:appgroup /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html && \
+    chown -R appuser:appgroup /var/cache/nginx && \
+    chown -R appuser:appgroup /var/log/nginx && \
+    chown -R appuser:appgroup /etc/nginx/security
+
+# Remove unnecessary files
+RUN rm -rf /usr/share/nginx/html/*.map && \
+    rm -rf /usr/share/nginx/html/.git
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:80/ || exit 1
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
