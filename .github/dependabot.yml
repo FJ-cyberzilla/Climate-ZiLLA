@@ -1,0 +1,72 @@
+version: 2
+updates:
+  # npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "📦 npm"
+      include: "scope"
+    open-pull-requests-limit: 10
+    versioning-strategy: auto
+    ignore:
+      - dependency-name: "express"
+        versions: ["5.x"] # Wait for Express 5 stability
+      - dependency-name: "node-fetch"
+        versions: ["3.x"] # Major version updates
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "github-actions"
+      - "dependencies"
+      - "automated"
+
+  # Docker (if using containers)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "docker"
+      - "dependencies"
+      - "automated"
+
+  # Security updates (critical)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "security"
+      - "dependencies"
+      - "critical"
+    groups:
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    pull-request-branch-name:
+      separator: "-"
+
+  # Server dependencies
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "server"
+      - "dependencies"
+      - "automated"
