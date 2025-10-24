@@ -1,0 +1,49 @@
+name: 🩺 Health Check Monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  health-check:
+    name: 🩺 Health Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check API Health
+      run: |
+        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.DOMAIN }}/health || echo "500")
+        
+        if [ "$RESPONSE" -ne 200 ]; then
+          echo "❌ Health check failed: HTTP $RESPONSE"
+          exit 1
+        else
+          echo "✅ Health check passed: HTTP $RESPONSE"
+        fi
+
+    - name: Check Response Time
+      run: |
+        START_TIME=$(date +%s%3N)
+        curl -s https://${{ secrets.DOMAIN }}/health > /dev/null
+        END_TIME=$(date +%s%3N)
+        DURATION=$((END_TIME - START_TIME))
+        
+        if [ $DURATION -gt 1000 ]; then
+          echo "⚠️  Slow response: ${DURATION}ms"
+        else
+          echo "✅ Good response: ${DURATION}ms"
+        fi
+
+    - name: Check SSL Certificate
+      run: |
+        openssl s_client -connect ${{ secrets.DOMAIN }}:443 -servername ${{ secrets.DOMAIN }} < /dev/null 2>/dev/null | openssl x509 -noout -dates
+        echo "✅ SSL certificate check completed"
+
+    - name: Notify on failure
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: 🚨 Climate-ZiLLA health check failed!
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      if: failure()
