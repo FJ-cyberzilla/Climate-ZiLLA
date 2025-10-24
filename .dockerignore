@@ -1,0 +1,92 @@
+# Security: Never include these in Docker images
+.git
+.gitignore
+README.md
+*.md
+.dockerignore
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build files
+dist/
+build/
+.out/
+.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Backup files
+*.backup
+*.bak
+
+# Security keys (double protection)
+*.pem
+*.key
+*.crt
+*.csr
+*_key
+*_secret
+*_token
+
+# Configuration files that might contain secrets
+config.local.js
+config.production.js
+
+# Documentation
+docs/
+*.pdf
+*.doc
+*.docx
+
+# Tests
+test/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Coverage
+coverage/
+.nyc_output
+
+# Lock files (we use package-lock.json only)
+yarn.lock
+pnpm-lock.yaml
+
+# Docker itself
+Dockerfile
+docker-compose.yml
+.docker/
