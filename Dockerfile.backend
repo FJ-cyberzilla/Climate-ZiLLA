@@ -1,0 +1,69 @@
+# Multi-stage build for security
+FROM node:18-alpine AS builder
+
+# Security: Install security tools
+RUN apk update && apk upgrade && \
+    apk add --no-cache --virtual .build-deps \
+    curl \
+    openssl \
+    python3 \
+    make \
+    g++
+
+# Create non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+WORKDIR /app
+
+# Copy package files
+COPY server/package*.json ./
+
+# Install dependencies with security scan
+RUN npm ci --only=production --audit=false && \
+    npm audit --production --audit-level=high
+
+# Copy server source
+COPY server/ ./
+
+# Production stage
+FROM node:18-alpine AS production
+
+# Security updates
+RUN apk update && apk upgrade && \
+    apk add --no-cache curl openssl
+
+# Create same non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder --chown=appuser:appgroup /app ./
+
+# Create secure directories
+RUN mkdir -p /app/logs /app/temp && \
+    chown -R appuser:appgroup /app/logs /app/temp && \
+    chmod -R 755 /app/logs /app/temp
+
+# Remove build tools and cache
+RUN npm cache clean --force && \
+    rm -rf /tmp/* /var/tmp/*
+
+# Security: Read-only filesystem where possible
+RUN chmod -R 555 /app/node_modules && \
+    chmod 444 /app/package*.json
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 3001
+
+# Start application
+CMD ["node", "server.js"]
