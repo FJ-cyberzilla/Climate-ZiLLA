@@ -1,3 +1,6 @@
+// For Node.js URL parsing
+import { URL } from "url";
+
 export default class GeoLocator {
     constructor() {
         this.currentLocation = null;
@@ -176,19 +179,27 @@ export default class GeoLocator {
                 isp: data.org,
                 postal: data.postal
             };
-        } else if (service.includes('ipinfo.io')) {
-            const [lat, lon] = data.loc?.split(',') || [0, 0];
-            location = {
-                ...location,
-                latitude: parseFloat(lat),
-                longitude: parseFloat(lon),
-                city: data.city,
-                country: data.country,
-                region: data.region,
-                timezone: data.timezone,
-                isp: data.org,
-                postal: data.postal
-            };
+        } else {
+            let hostname = "";
+            try {
+                hostname = (new URL(service)).hostname;
+            } catch (e) {
+                hostname = "";
+            }
+            if (hostname === 'ipinfo.io') {
+                const [lat, lon] = data.loc?.split(',') || [0, 0];
+                location = {
+                    ...location,
+                    latitude: parseFloat(lat),
+                    longitude: parseFloat(lon),
+                    city: data.city,
+                    country: data.country,
+                    region: data.region,
+                    timezone: data.timezone,
+                    isp: data.org,
+                    postal: data.postal
+                };
+            }
         }
 
         // Enhance with additional data
