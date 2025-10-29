@@ -400,7 +400,10 @@ export default class CounterattackEngine {
     getSessionId() {
         let sessionId = localStorage.getItem('securitySessionId');
         if (!sessionId) {
-            sessionId = 'SESS_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const array = new Uint8Array(12);
+            window.crypto.getRandomValues(array);
+            const randomPart = Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+            sessionId = 'SESS_' + Date.now() + '_' + randomPart;
             localStorage.setItem('securitySessionId', sessionId);
         }
         return sessionId;
