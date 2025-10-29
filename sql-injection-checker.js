@@ -360,7 +360,13 @@ export default class SQLInjectionChecker {
     getSessionId() {
         let sessionId = sessionStorage.getItem('securitySessionId');
         if (!sessionId) {
-            sessionId = 'SESS_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const randomBytes = new Uint8Array(9);
+            window.crypto.getRandomValues(randomBytes);
+            const randomStr = Array.from(randomBytes).map(b => b.toString(36)).join('');
+            sessionId = 'SESS_' + Date.now() + '_' + randomStr;
+            window.crypto.getRandomValues(randomBytes);
+            const randomStr = Array.from(randomBytes).map(b => b.toString(36)).join('');
+            sessionId = 'SESS_' + Date.now() + '_' + randomStr;
             sessionStorage.setItem('securitySessionId', sessionId);
         }
         return sessionId;
