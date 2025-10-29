@@ -299,7 +299,7 @@ export default class ThreatDetector {
     loadAttackPatterns() {
         return {
             sqlInjection: this.sqlPatterns,
-            xss: [/<script\b[^>]*>([\s\S]*?)<\/script>/gi, /javascript:/gi],
+            xss: [/<script\b[^>]*>([\s\S]*?)<\/script[\s\S]*?>/gi, /javascript:/gi],
             pathTraversal: [/\.\.\//g, /\/etc\//g, /\/passwd/g],
             csrf: [/<form[^>]*action[^>]*>/gi]
         };
