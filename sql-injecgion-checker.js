@@ -360,10 +360,20 @@ export default class SQLInjectionChecker {
     getSessionId() {
         let sessionId = sessionStorage.getItem('securitySessionId');
         if (!sessionId) {
-            sessionId = 'SESS_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            // Use a cryptographically secure random string for the random part
+            sessionId = 'SESS_' + Date.now() + '_' + this.generateSecureRandomString(12);
             sessionStorage.setItem('securitySessionId', sessionId);
         }
         return sessionId;
+    }
+
+    // Helper: Secure random string generator
+    generateSecureRandomString(length = 12) {
+        // Generates a base64url-encoded random string
+        const array = new Uint8Array(length);
+        window.crypto.getRandomValues(array);
+        return btoa(String.fromCharCode.apply(null, array))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').substr(0, length);
     }
 
     storeSecurityEvent(event) {
