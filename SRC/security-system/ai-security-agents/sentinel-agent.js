@@ -1,3 +1,415 @@
+/**
+ * 🌍 Enhanced Geo Locator
+ * Advanced location services with multiple fallback methods
+ */
+
+export default class GeoLocator {
+    constructor() {
+        this.locationCache = new Map();
+        this.locationHistory = [];
+        this.maxCacheSize = 1000;
+        this.cacheTimeout = 30 * 60 * 1000; // 30 minutes
+        
+        this.locationSources = {
+            GPS: 'gps',
+            IP: 'ip',
+            NETWORK: 'network',
+            MANUAL: 'manual',
+            FALLBACK: 'fallback'
+        };
+        
+        this.initLocationServices();
+    }
+
+    initLocationServices() {
+        this.watchId = null;
+        this.lastKnownPosition = null;
+        this.accuracyThreshold = 100; // meters
+        this.maxAge = 30000; // 30 seconds
+        
+        console.log('🌍 Geo Locator - Enhanced Location Services Activated');
+    }
+
+    // Main location acquisition method
+    async getCurrentLocation(options = {}) {
+        const {
+            enableHighAccuracy = true,
+            timeout = 10000,
+            maximumAge = this.maxAge,
+            fallbackToIP = true
+        } = options;
+
+        // Check cache first
+        const cachedLocation = this.getCachedLocation();
+        if (cachedLocation && this.isLocationFresh(cachedLocation)) {
+            return cachedLocation;
+        }
+
+        try {
+            // Try GPS first
+            const gpsLocation = await this.getGPSLocation({
+                enableHighAccuracy,
+                timeout,
+                maximumAge
+            });
+
+            if (gpsLocation && gpsLocation.accuracy <= this.accuracyThreshold) {
+                this.cacheLocation(gpsLocation);
+                return gpsLocation;
+            }
+
+            // Fallback to IP-based location
+            if (fallbackToIP) {
+                const ipLocation = await this.getIPLocation();
+                if (ipLocation) {
+                    this.cacheLocation(ipLocation);
+                    return ipLocation;
+                }
+            }
+
+            // Final fallback
+            return this.getFallbackLocation();
+
+        } catch (error) {
+            console.error('Location acquisition failed:', error);
+            return this.getFallbackLocation();
+        }
+    }
+
+    // GPS-based location
+    async getGPSLocation(options) {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation not supported'));
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const location = this.processGPSPosition(position);
+                    resolve(location);
+                },
+                (error) => {
+                    reject(this.handleGeolocationError(error));
+                },
+                options
+            );
+        });
+    }
+
+    // IP-based location fallback
+    async getIPLocation() {
+        try {
+            // Try multiple IP location services
+            const location = await Promise.any([
+                this.fetchIPAPI(),
+                this.fetchIPInfo(),
+                this.fetchGeolocationAPI()
+            ]);
+
+            return {
+                latitude: location.lat,
+                longitude: location.lon,
+                accuracy: 5000, // IP-based accuracy is low
+                source: this.locationSources.IP,
+                timestamp: new Date(),
+                city: location.city,
+                country: location.country,
+                countryCode: location.countryCode,
+                timezone: location.timezone,
+                isp: location.isp
+            };
+
+        } catch (error) {
+            console.warn('All IP location services failed');
+            return null;
+        }
+    }
+
+    // Multiple IP location service providers
+    async fetchIPAPI() {
+        const response = await fetch('http://ip-api.com/json/');
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            return {
+                lat: data.lat,
+                lon: data.lon,
+                city: data.city,
+                country: data.country,
+                countryCode: data.countryCode,
+                timezone: data.timezone,
+                isp: data.isp
+            };
+        }
+        throw new Error('IP-API service failed');
+    }
+
+    async fetchIPInfo() {
+        try {
+            const response = await fetch('https://ipinfo.io/json');
+            const data = await response.json();
+            
+            const [lat, lon] = data.loc.split(',');
+            return {
+                lat: parseFloat(lat),
+                lon: parseFloat(lon),
+                city: data.city,
+                country: data.country,
+                countryCode: data.country,
+                timezone: data.timezone,
+                isp: data.org
+            };
+        } catch (error) {
+            throw new Error('IPInfo service failed');
+        }
+    }
+
+    async fetchGeolocationAPI() {
+        // Another fallback service
+        throw new Error('Geolocation API not implemented');
+    }
+
+    // Continuous location tracking
+    startTracking(callback, options = {}) {
+        if (!navigator.geolocation) {
+            console.error('Geolocation not available for tracking');
+            return null;
+        }
+
+        const trackingOptions = {
+            enableHighAccuracy: true,
+            maximumAge: 30000,
+            timeout: 27000,
+            ...options
+        };
+
+        this.watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                const location = this.processGPSPosition(position);
+                this.cacheLocation(location);
+                this.recordLocationHistory(location);
+                
+                if (callback) {
+                    callback(location);
+                }
+            },
+            (error) => {
+                console.error('Location tracking error:', this.handleGeolocationError(error));
+            },
+            trackingOptions
+        );
+
+        return this.watchId;
+    }
+
+    stopTracking() {
+        if (this.watchId) {
+            navigator.geolocation.clearWatch(this.watchId);
+            this.watchId = null;
+        }
+    }
+
+    // Location processing
+    processGPSPosition(position) {
+        const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = position.coords;
+        
+        return {
+            latitude,
+            longitude,
+            accuracy,
+            altitude: altitude || null,
+            altitudeAccuracy: altitudeAccuracy || null,
+            heading: heading || null,
+            speed: speed || null,
+            source: this.locationSources.GPS,
+            timestamp: new Date(position.timestamp),
+            satellites: this.estimateSatellites(accuracy)
+        };
+    }
+
+    estimateSatellites(accuracy) {
+        // Rough estimation based on accuracy
+        if (accuracy < 10) return 8; // High accuracy
+        if (accuracy < 50) return 5; // Medium accuracy
+        if (accuracy < 100) return 3; // Low accuracy
+        return 1; // Very low accuracy
+    }
+
+    // Cache management
+    cacheLocation(location) {
+        const cacheKey = this.generateCacheKey(location);
+        this.locationCache.set(cacheKey, {
+            ...location,
+            cachedAt: new Date()
+        });
+
+        // Manage cache size
+        if (this.locationCache.size > this.maxCacheSize) {
+            const firstKey = this.locationCache.keys().next().value;
+            this.locationCache.delete(firstKey);
+        }
+    }
+
+    getCachedLocation() {
+        if (this.locationCache.size === 0) return null;
+        
+        // Get most recent cached location
+        const locations = Array.from(this.locationCache.values());
+        locations.sort((a, b) => new Date(b.cachedAt) - new Date(a.cachedAt));
+        
+        return locations[0];
+    }
+
+    isLocationFresh(location) {
+        const age = Date.now() - new Date(location.cachedAt).getTime();
+        return age < this.cacheTimeout;
+    }
+
+    generateCacheKey(location) {
+        return `${location.latitude.toFixed(4)}_${location.longitude.toFixed(4)}_${location.source}`;
+    }
+
+    // Location history
+    recordLocationHistory(location) {
+        this.locationHistory.push({
+            ...location,
+            recordedAt: new Date()
+        });
+
+        // Keep only recent history
+        if (this.locationHistory.length > 1000) {
+            this.locationHistory = this.locationHistory.slice(-500);
+        }
+    }
+
+    getLocationHistory(limit = 100) {
+        return this.locationHistory.slice(-limit);
+    }
+
+    // Distance calculations
+    calculateDistance(lat1, lon1, lat2, lon2, unit = 'km') {
+        // Haversine formula
+        const R = unit === 'km' ? 6371 : 3959; // Earth radius in km or miles
+        const dLat = this.deg2rad(lat2 - lat1);
+        const dLon = this.deg2rad(lon2 - lon1);
+        
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+            
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        
+        return distance;
+    }
+
+    deg2rad(deg) {
+        return deg * (Math.PI/180);
+    }
+
+    // Location-based services
+    async getWeatherStationNearby(location, radiusKm = 50) {
+        // This would integrate with weather station APIs
+        const stations = await this.fetchNearbyStations(location, radiusKm);
+        return stations.sort((a, b) => 
+            this.calculateDistance(location.latitude, location.longitude, a.lat, a.lon) -
+            this.calculateDistance(location.latitude, location.longitude, b.lat, b.lon)
+        )[0];
+    }
+
+    async getTimeZone(location) {
+        try {
+            const response = await fetch(
+                `https://api.timezonedb.com/v2.1/get-time-zone?key=YOUR_API_KEY&format=json&by=position&lat=${location.latitude}&lng=${location.longitude}`
+            );
+            const data = await response.json();
+            return data.zoneName;
+        } catch (error) {
+            // Fallback to calculating from longitude
+            return this.estimateTimeZone(location.longitude);
+        }
+    }
+
+    estimateTimeZone(longitude) {
+        // Rough timezone estimation based on longitude
+        const offset = Math.round(longitude / 15);
+        return `UTC${offset >= 0 ? '+' : ''}${offset}`;
+    }
+
+    // Error handling
+    handleGeolocationError(error) {
+        const errorMessages = {
+            1: 'Location access denied by user',
+            2: 'Location unavailable',
+            3: 'Location request timed out'
+        };
+
+        return new Error(errorMessages[error.code] || 'Unknown location error');
+    }
+
+    // Fallback methods
+    getFallbackLocation() {
+        // Return a default location or last known position
+        return {
+            latitude: 40.7128, // New York City as fallback
+            longitude: -74.0060,
+            accuracy: 10000,
+            source: this.locationSources.FALLBACK,
+            timestamp: new Date(),
+            city: 'New York',
+            country: 'United States',
+            countryCode: 'US',
+            timezone: 'America/New_York'
+        };
+    }
+
+    // Utility methods
+    isValidLocation(location) {
+        return location && 
+               typeof location.latitude === 'number' && 
+               typeof location.longitude === 'number' &&
+               Math.abs(location.latitude) <= 90 &&
+               Math.abs(location.longitude) <= 180;
+    }
+
+    formatLocation(location, format = 'decimal') {
+        if (!this.isValidLocation(location)) return 'Invalid location';
+        
+        if (format === 'dms') {
+            return this.decimalToDMS(location.latitude, location.longitude);
+        }
+        
+        return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+    }
+
+    decimalToDMS(lat, lon) {
+        const latDir = lat >= 0 ? 'N' : 'S';
+        const lonDir = lon >= 0 ? 'E' : 'W';
+        
+        const latAbs = Math.abs(lat);
+        const lonAbs = Math.abs(lon);
+        
+        const latDeg = Math.floor(latAbs);
+        const latMin = Math.floor((latAbs - latDeg) * 60);
+        const latSec = ((latAbs - latDeg - latMin/60) * 3600).toFixed(1);
+        
+        const lonDeg = Math.floor(lonAbs);
+        const lonMin = Math.floor((lonAbs - lonDeg) * 60);
+        const lonSec = ((lonAbs - lonDeg - lonMin/60) * 3600).toFixed(1);
+        
+        return `${latDeg}°${latMin}'${latSec}"${latDir} ${lonDeg}°${lonMin}'${lonSec}"${lonDir}`;
+    }
+
+    // Cleanup
+    destroy() {
+        this.stopTracking();
+        this.locationCache.clear();
+        this.locationHistory = [];
+        console.log('🌍 Geo Locator - Services stopped');
+    }
+            }
 export default class SentinelAgent {
     constructor() {
         this.threatDatabase = new Map();
