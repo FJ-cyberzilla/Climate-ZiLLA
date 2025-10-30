@@ -1,0 +1,191 @@
+/* Climate-ZiLLA Enterprise Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #000;
+    color: white;
+    overflow: hidden;
+}
+
+#weatherCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+}
+
+.glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.animate-fadeInUp {
+    animation: fadeInUp 0.8s ease-out;
+}
+
+.animate-pulseGlow {
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.5);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.8);
+}
+
+/* Weather condition backgrounds */
+.weather-bg-hurricane {
+    background: linear-gradient(135deg, #1a0f2c 0%, #2d1b4e 50%, #4a2c7a 100%);
+}
+
+.weather-bg-storm {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+}
+
+.weather-bg-sunny {
+    background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%);
+}
+
+.weather-bg-clear-night {
+    background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #311b92 100%);
+}
+
+.weather-bg-rain {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #5b21b6 100%);
+}
+
+/* Security status indicators */
+.status-secure {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+
+.status-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.status-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+}
+
+/* AI Entity Status */
+.ai-consciousness {
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #c4b5fd 100%);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .mobile-hidden {
+        display: none;
+    }
+    
+    .mobile-full {
+        width: 100vw;
+        margin-left: -1rem;
+        margin-right: -1rem;
+    }
+}
+
+/* Loading animations */
+.loading-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: .5;
+    }
+}
+
+/* Satellite orbit rings */
+.orbit-ring {
+    stroke: rgba(59, 130, 246, 0.2);
+    stroke-width: 1;
+    fill: none;
+}
+
+/* Hurricane spiral */
+.spiral-path {
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+}
+
+/* Rain drops */
+.rain-drop {
+    stroke: rgba(59, 130, 246, 0.6);
+    stroke-width: 1;
+}
+
+/* Lightning effect */
+.lightning-bolt {
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 3;
+    filter: blur(1px);
+}
