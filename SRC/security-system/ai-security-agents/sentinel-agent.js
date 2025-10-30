@@ -1,914 +1,497 @@
 /**
- * 🌍 Enhanced Geo Locator
- * Advanced location services with multiple fallback methods
+ * 🛡️ Sentinel Agent - Main AI Security Agent
+ * Advanced AI-driven security monitoring and response
  */
 
-export default class GeoLocator {
-    constructor() {
-        this.locationCache = new Map();
-        this.locationHistory = [];
-        this.maxCacheSize = 1000;
-        this.cacheTimeout = 30 * 60 * 1000; // 30 minutes
+export default class SentinelAgent {
+    constructor(securitySystem) {
+        this.securitySystem = securitySystem;
+        this.agentId = this.generateAgentId();
+        this.threatIntelligence = new Map();
+        this.behavioralBaselines = new Map();
+        this.anomalyDetector = new AnomalyDetector();
         
-        this.locationSources = {
-            GPS: 'gps',
-            IP: 'ip',
-            NETWORK: 'network',
-            MANUAL: 'manual',
-            FALLBACK: 'fallback'
+        this.activationTime = new Date();
+        this.incidentsHandled = 0;
+        this.threatsNeutralized = 0;
+        
+        this.initSentinelSystems();
+    }
+
+    initSentinelSystems() {
+        // Core monitoring systems
+        this.monitoringSystems = {
+            network: new NetworkMonitor(),
+            behavior: new BehaviorMonitor(),
+            pattern: new PatternMonitor(),
+            intelligence: new ThreatIntelligenceFeed()
         };
-        
-        this.initLocationServices();
+
+        // Response systems
+        this.responseSystems = {
+            blocker: new ThreatBlocker(),
+            analyzer: new DeepThreatAnalyzer(),
+            reporter: new SecurityReporter()
+        };
+
+        // Learning systems
+        this.learningSystems = {
+            patternLearner: new PatternLearner(),
+            adaptiveDefense: new AdaptiveDefenseSystem(),
+            threatPredictor: new ThreatPredictor()
+        };
+
+        console.log(`🛡️ Sentinel Agent ${this.agentId} - Activation Complete`);
     }
 
-    initLocationServices() {
-        this.watchId = null;
-        this.lastKnownPosition = null;
-        this.accuracyThreshold = 100; // meters
-        this.maxAge = 30000; // 30 seconds
+    // Main monitoring loop
+    async startContinuousMonitoring() {
+        console.log('🛡️ Sentinel Agent - Starting continuous monitoring');
         
-        console.log('🌍 Geo Locator - Enhanced Location Services Activated');
+        this.monitoringInterval = setInterval(async () => {
+            await this.monitoringCycle();
+        }, 5000); // Monitor every 5 seconds
+
+        // Deep threat analysis every minute
+        this.deepAnalysisInterval = setInterval(async () => {
+            await this.performDeepThreatAnalysis();
+        }, 60000);
     }
 
-    // Main location acquisition method
-    async getCurrentLocation(options = {}) {
-        const {
-            enableHighAccuracy = true,
-            timeout = 10000,
-            maximumAge = this.maxAge,
-            fallbackToIP = true
-        } = options;
-
-        // Check cache first
-        const cachedLocation = this.getCachedLocation();
-        if (cachedLocation && this.isLocationFresh(cachedLocation)) {
-            return cachedLocation;
+    stopMonitoring() {
+        if (this.monitoringInterval) {
+            clearInterval(this.monitoringInterval);
         }
+        if (this.deepAnalysisInterval) {
+            clearInterval(this.deepAnalysisInterval);
+        }
+        console.log('🛡️ Sentinel Agent - Monitoring stopped');
+    }
 
+    async monitoringCycle() {
         try {
-            // Try GPS first
-            const gpsLocation = await this.getGPSLocation({
-                enableHighAccuracy,
-                timeout,
-                maximumAge
-            });
-
-            if (gpsLocation && gpsLocation.accuracy <= this.accuracyThreshold) {
-                this.cacheLocation(gpsLocation);
-                return gpsLocation;
+            const monitoringData = await this.collectMonitoringData();
+            const threatAssessment = await this.assessThreats(monitoringData);
+            
+            if (threatAssessment.riskLevel >= 7) {
+                await this.initiateResponseProtocol(threatAssessment);
             }
-
-            // Fallback to IP-based location
-            if (fallbackToIP) {
-                const ipLocation = await this.getIPLocation();
-                if (ipLocation) {
-                    this.cacheLocation(ipLocation);
-                    return ipLocation;
-                }
-            }
-
-            // Final fallback
-            return this.getFallbackLocation();
-
+            
+            // Update behavioral baselines
+            await this.updateBehavioralBaselines(monitoringData);
+            
         } catch (error) {
-            console.error('Location acquisition failed:', error);
-            return this.getFallbackLocation();
+            console.error('Sentinel monitoring cycle error:', error);
         }
     }
 
-    // GPS-based location
-    async getGPSLocation(options) {
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                reject(new Error('Geolocation not supported'));
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const location = this.processGPSPosition(position);
-                    resolve(location);
-                },
-                (error) => {
-                    reject(this.handleGeolocationError(error));
-                },
-                options
-            );
-        });
+    async collectMonitoringData() {
+        return {
+            network: await this.monitoringSystems.network.getMetrics(),
+            behavior: await this.monitoringSystems.behavior.getUserBehavior(),
+            system: await this.getSystemMetrics(),
+            security: await this.getSecurityEvents(),
+            temporal: this.getTemporalFactors()
+        };
     }
 
-    // IP-based location fallback
-    async getIPLocation() {
+    async assessThreats(monitoringData) {
+        const assessments = await Promise.all([
+            this.assessNetworkThreats(monitoringData.network),
+            this.assessBehavioralThreats(monitoringData.behavior),
+            this.assessSystemThreats(monitoringData.system),
+            this.assessCompositeThreats(monitoringData)
+        ]);
+
+        const compositeAssessment = this.compileThreatAssessment(assessments);
+        
+        // Store for intelligence
+        this.updateThreatIntelligence(compositeAssessment);
+        
+        return compositeAssessment;
+    }
+
+    async assessNetworkThreats(networkData) {
+        const threats = [];
+        let riskScore = 0;
+
+        // Analyze request patterns
+        if (networkData.requestsPerMinute > 1000) {
+            threats.push({
+                type: 'POTENTIAL_DDoS',
+                severity: 'HIGH',
+                confidence: 0.85,
+                evidence: `High request volume: ${networkData.requestsPerMinute} RPM`
+            });
+            riskScore += 8;
+        }
+
+        // Analyze IP reputation
+        const suspiciousIPs = await this.analyzeIPReputation(networkData.uniqueIPs);
+        if (suspiciousIPs.length > 0) {
+            threats.push({
+                type: 'SUSPICIOUS_IP_ADDRESSES',
+                severity: 'MEDIUM',
+                confidence: 0.75,
+                evidence: `${suspiciousIPs.length} suspicious IPs detected`
+            });
+            riskScore += 6;
+        }
+
+        return { threats, riskScore: Math.min(10, riskScore) };
+    }
+
+    async assessBehavioralThreats(behaviorData) {
+        const threats = [];
+        let riskScore = 0;
+
+        // Detect behavioral anomalies
+        const anomalies = this.anomalyDetector.detectBehavioralAnomalies(behaviorData);
+        
+        anomalies.forEach(anomaly => {
+            threats.push({
+                type: 'BEHAVIORAL_ANOMALY',
+                severity: anomaly.severity,
+                confidence: anomaly.confidence,
+                evidence: anomaly.description,
+                user: anomaly.userId
+            });
+            
+            riskScore += anomaly.riskScore;
+        });
+
+        return { threats, riskScore: Math.min(10, riskScore) };
+    }
+
+    async initiateResponseProtocol(threatAssessment) {
+        console.log(`🛡️ Sentinel initiating response protocol for threat level: ${threatAssessment.riskLevel}`);
+        
+        const responsePlan = this.generateResponsePlan(threatAssessment);
+        
+        // Execute immediate responses
+        for (const response of responsePlan.immediate) {
+            await this.executeResponse(response);
+        }
+        
+        // Schedule delayed responses
+        if (responsePlan.delayed.length > 0) {
+            setTimeout(async () => {
+                for (const response of responsePlan.delayed) {
+                    await this.executeResponse(response);
+                }
+            }, 30000); // Execute after 30 seconds
+        }
+        
+        // Learn from this incident
+        await this.learnFromIncident(threatAssessment, responsePlan);
+        
+        this.incidentsHandled++;
+    }
+
+    generateResponsePlan(threatAssessment) {
+        const plan = {
+            immediate: [],
+            delayed: [],
+            monitoring: [],
+            reporting: []
+        };
+
+        threatAssessment.threats.forEach(threat => {
+            const responses = this.determineThreatResponses(threat);
+            plan.immediate.push(...responses.immediate);
+            plan.delayed.push(...responses.delayed);
+            plan.monitoring.push(...responses.monitoring);
+        });
+
+        return plan;
+    }
+
+    determineThreatResponses(threat) {
+        const responses = {
+            immediate: [],
+            delayed: [],
+            monitoring: []
+        };
+
+        switch (threat.type) {
+            case 'POTENTIAL_DDoS':
+                responses.immediate = [
+                    'ACTIVATE_RATE_LIMITING',
+                    'ENABLE_DDoS_MODE',
+                    'ALERT_SECURITY_TEAM'
+                ];
+                responses.monitoring = [
+                    'MONITOR_BANDWIDTH',
+                    'TRACK_IP_VELOCITY'
+                ];
+                break;
+
+            case 'SUSPICIOUS_IP_ADDRESSES':
+                responses.immediate = [
+                    'BLOCK_MALICIOUS_IPS',
+                    'ENHANCE_LOGGING',
+                    'UPDATE_THREAT_INTELLIGENCE'
+                ];
+                break;
+
+            case 'BEHAVIORAL_ANOMALY':
+                responses.immediate = [
+                    'CHALLENGE_USER',
+                    'ENHANCE_MONITORING',
+                    'ANALYZE_SESSION'
+                ];
+                responses.delayed = [
+                    'UPDATE_BEHAVIORAL_MODELS'
+                ];
+                break;
+
+            default:
+                responses.immediate = [
+                    'ENHANCE_MONITORING',
+                    'LOG_INCIDENT'
+                ];
+        }
+
+        return responses;
+    }
+
+    async executeResponse(response) {
+        console.log(`🛡️ Executing security response: ${response}`);
+        
         try {
-            // Try multiple IP location services
-            const location = await Promise.any([
-                this.fetchIPAPI(),
-                this.fetchIPInfo(),
-                this.fetchGeolocationAPI()
+            switch (response) {
+                case 'ACTIVATE_RATE_LIMITING':
+                    await this.responseSystems.blocker.activateRateLimiting();
+                    break;
+                    
+                case 'BLOCK_MALICIOUS_IPS':
+                    await this.responseSystems.blocker.blockThreatIPs();
+                    break;
+                    
+                case 'ENABLE_DDoS_MODE':
+                    await this.securitySystem.activateDDoSProtection();
+                    break;
+                    
+                case 'CHALLENGE_USER':
+                    await this.responseSystems.analyzer.challengeSuspiciousUser();
+                    break;
+                    
+                case 'UPDATE_THREAT_INTELLIGENCE':
+                    await this.updateGlobalThreatIntelligence();
+                    break;
+                    
+                default:
+                    console.log(`Unknown response: ${response}`);
+            }
+            
+            this.threatsNeutralized++;
+            
+        } catch (error) {
+            console.error(`Response execution failed: ${response}`, error);
+        }
+    }
+
+    // Advanced threat analysis
+    async performDeepThreatAnalysis() {
+        console.log('🛡️ Performing deep threat analysis');
+        
+        try {
+            const analysisResults = await Promise.all([
+                this.analyzeAttackPatterns(),
+                this.assessSystemVulnerabilities(),
+                this.predictFutureThreats(),
+                this.correlateGlobalIntelligence()
             ]);
 
-            return {
-                latitude: location.lat,
-                longitude: location.lon,
-                accuracy: 5000, // IP-based accuracy is low
-                source: this.locationSources.IP,
-                timestamp: new Date(),
-                city: location.city,
-                country: location.country,
-                countryCode: location.countryCode,
-                timezone: location.timezone,
-                isp: location.isp
-            };
-
-        } catch (error) {
-            console.warn('All IP location services failed');
-            return null;
-        }
-    }
-
-    // Multiple IP location service providers
-    async fetchIPAPI() {
-        const response = await fetch('http://ip-api.com/json/');
-        const data = await response.json();
-        
-        if (data.status === 'success') {
-            return {
-                lat: data.lat,
-                lon: data.lon,
-                city: data.city,
-                country: data.country,
-                countryCode: data.countryCode,
-                timezone: data.timezone,
-                isp: data.isp
-            };
-        }
-        throw new Error('IP-API service failed');
-    }
-
-    async fetchIPInfo() {
-        try {
-            const response = await fetch('https://ipinfo.io/json');
-            const data = await response.json();
+            const deepAssessment = this.compileDeepAnalysis(analysisResults);
             
-            const [lat, lon] = data.loc.split(',');
-            return {
-                lat: parseFloat(lat),
-                lon: parseFloat(lon),
-                city: data.city,
-                country: data.country,
-                countryCode: data.country,
-                timezone: data.timezone,
-                isp: data.org
-            };
-        } catch (error) {
-            throw new Error('IPInfo service failed');
-        }
-    }
-
-    async fetchGeolocationAPI() {
-        // Another fallback service
-        throw new Error('Geolocation API not implemented');
-    }
-
-    // Continuous location tracking
-    startTracking(callback, options = {}) {
-        if (!navigator.geolocation) {
-            console.error('Geolocation not available for tracking');
-            return null;
-        }
-
-        const trackingOptions = {
-            enableHighAccuracy: true,
-            maximumAge: 30000,
-            timeout: 27000,
-            ...options
-        };
-
-        this.watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                const location = this.processGPSPosition(position);
-                this.cacheLocation(location);
-                this.recordLocationHistory(location);
-                
-                if (callback) {
-                    callback(location);
-                }
-            },
-            (error) => {
-                console.error('Location tracking error:', this.handleGeolocationError(error));
-            },
-            trackingOptions
-        );
-
-        return this.watchId;
-    }
-
-    stopTracking() {
-        if (this.watchId) {
-            navigator.geolocation.clearWatch(this.watchId);
-            this.watchId = null;
-        }
-    }
-
-    // Location processing
-    processGPSPosition(position) {
-        const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = position.coords;
-        
-        return {
-            latitude,
-            longitude,
-            accuracy,
-            altitude: altitude || null,
-            altitudeAccuracy: altitudeAccuracy || null,
-            heading: heading || null,
-            speed: speed || null,
-            source: this.locationSources.GPS,
-            timestamp: new Date(position.timestamp),
-            satellites: this.estimateSatellites(accuracy)
-        };
-    }
-
-    estimateSatellites(accuracy) {
-        // Rough estimation based on accuracy
-        if (accuracy < 10) return 8; // High accuracy
-        if (accuracy < 50) return 5; // Medium accuracy
-        if (accuracy < 100) return 3; // Low accuracy
-        return 1; // Very low accuracy
-    }
-
-    // Cache management
-    cacheLocation(location) {
-        const cacheKey = this.generateCacheKey(location);
-        this.locationCache.set(cacheKey, {
-            ...location,
-            cachedAt: new Date()
-        });
-
-        // Manage cache size
-        if (this.locationCache.size > this.maxCacheSize) {
-            const firstKey = this.locationCache.keys().next().value;
-            this.locationCache.delete(firstKey);
-        }
-    }
-
-    getCachedLocation() {
-        if (this.locationCache.size === 0) return null;
-        
-        // Get most recent cached location
-        const locations = Array.from(this.locationCache.values());
-        locations.sort((a, b) => new Date(b.cachedAt) - new Date(a.cachedAt));
-        
-        return locations[0];
-    }
-
-    isLocationFresh(location) {
-        const age = Date.now() - new Date(location.cachedAt).getTime();
-        return age < this.cacheTimeout;
-    }
-
-    generateCacheKey(location) {
-        return `${location.latitude.toFixed(4)}_${location.longitude.toFixed(4)}_${location.source}`;
-    }
-
-    // Location history
-    recordLocationHistory(location) {
-        this.locationHistory.push({
-            ...location,
-            recordedAt: new Date()
-        });
-
-        // Keep only recent history
-        if (this.locationHistory.length > 1000) {
-            this.locationHistory = this.locationHistory.slice(-500);
-        }
-    }
-
-    getLocationHistory(limit = 100) {
-        return this.locationHistory.slice(-limit);
-    }
-
-    // Distance calculations
-    calculateDistance(lat1, lon1, lat2, lon2, unit = 'km') {
-        // Haversine formula
-        const R = unit === 'km' ? 6371 : 3959; // Earth radius in km or miles
-        const dLat = this.deg2rad(lat2 - lat1);
-        const dLon = this.deg2rad(lon2 - lon1);
-        
-        const a = 
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
+            // Update adaptive defense systems
+            await this.learningSystems.adaptiveDefense.updateFromAnalysis(deepAssessment);
             
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        const distance = R * c;
-        
-        return distance;
-    }
-
-    deg2rad(deg) {
-        return deg * (Math.PI/180);
-    }
-
-    // Location-based services
-    async getWeatherStationNearby(location, radiusKm = 50) {
-        // This would integrate with weather station APIs
-        const stations = await this.fetchNearbyStations(location, radiusKm);
-        return stations.sort((a, b) => 
-            this.calculateDistance(location.latitude, location.longitude, a.lat, a.lon) -
-            this.calculateDistance(location.latitude, location.longitude, b.lat, b.lon)
-        )[0];
-    }
-
-    async getTimeZone(location) {
-        try {
-            const response = await fetch(
-                `https://api.timezonedb.com/v2.1/get-time-zone?key=YOUR_API_KEY&format=json&by=position&lat=${location.latitude}&lng=${location.longitude}`
-            );
-            const data = await response.json();
-            return data.zoneName;
+            // Generate intelligence report
+            await this.responseSystems.reporter.generateIntelligenceReport(deepAssessment);
+            
         } catch (error) {
-            // Fallback to calculating from longitude
-            return this.estimateTimeZone(location.longitude);
+            console.error('Deep threat analysis failed:', error);
         }
     }
 
-    estimateTimeZone(longitude) {
-        // Rough timezone estimation based on longitude
-        const offset = Math.round(longitude / 15);
-        return `UTC${offset >= 0 ? '+' : ''}${offset}`;
-    }
-
-    // Error handling
-    handleGeolocationError(error) {
-        const errorMessages = {
-            1: 'Location access denied by user',
-            2: 'Location unavailable',
-            3: 'Location request timed out'
-        };
-
-        return new Error(errorMessages[error.code] || 'Unknown location error');
-    }
-
-    // Fallback methods
-    getFallbackLocation() {
-        // Return a default location or last known position
-        return {
-            latitude: 40.7128, // New York City as fallback
-            longitude: -74.0060,
-            accuracy: 10000,
-            source: this.locationSources.FALLBACK,
+    // Machine Learning integration
+    async learnFromIncident(threatAssessment, responsePlan) {
+        const learningData = {
+            threat: threatAssessment,
+            response: responsePlan,
+            outcome: 'NEUTRALIZED', // Assume success for now
             timestamp: new Date(),
-            city: 'New York',
-            country: 'United States',
-            countryCode: 'US',
-            timezone: 'America/New_York'
+            effectiveness: this.calculateResponseEffectiveness(threatAssessment, responsePlan)
         };
+
+        // Update pattern learning
+        await this.learningSystems.patternLearner.learnFromIncident(learningData);
+        
+        // Update threat predictor
+        await this.learningSystems.threatPredictor.updateModels(learningData);
+        
+        // Share intelligence with other systems
+        await this.shareThreatIntelligence(learningData);
+    }
+
+    calculateResponseEffectiveness(threatAssessment, responsePlan) {
+        // Simplified effectiveness calculation
+        const threatNeutralized = threatAssessment.riskLevel < 3; // Assuming risk reduced
+        const resourcesUsed = responsePlan.immediate.length + responsePlan.delayed.length;
+        
+        return threatNeutralized ? 
+            Math.max(0.7, 1 - (resourcesUsed * 0.1)) : 0.3;
     }
 
     // Utility methods
-    isValidLocation(location) {
-        return location && 
-               typeof location.latitude === 'number' && 
-               typeof location.longitude === 'number' &&
-               Math.abs(location.latitude) <= 90 &&
-               Math.abs(location.longitude) <= 180;
+    generateAgentId() {
+        return `SENTINEL_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
     }
 
-    formatLocation(location, format = 'decimal') {
-        if (!this.isValidLocation(location)) return 'Invalid location';
-        
-        if (format === 'dms') {
-            return this.decimalToDMS(location.latitude, location.longitude);
+    updateThreatIntelligence(assessment) {
+        const intelligenceId = `THREAT_${Date.now()}`;
+        this.threatIntelligence.set(intelligenceId, {
+            id: intelligenceId,
+            ...assessment,
+            timestamp: new Date()
+        });
+
+        // Keep only recent intelligence
+        if (this.threatIntelligence.size > 500) {
+            const firstKey = this.threatIntelligence.keys().next().value;
+            this.threatIntelligence.delete(firstKey);
         }
-        
-        return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
     }
 
-    decimalToDMS(lat, lon) {
-        const latDir = lat >= 0 ? 'N' : 'S';
-        const lonDir = lon >= 0 ? 'E' : 'W';
-        
-        const latAbs = Math.abs(lat);
-        const lonAbs = Math.abs(lon);
-        
-        const latDeg = Math.floor(latAbs);
-        const latMin = Math.floor((latAbs - latDeg) * 60);
-        const latSec = ((latAbs - latDeg - latMin/60) * 3600).toFixed(1);
-        
-        const lonDeg = Math.floor(lonAbs);
-        const lonMin = Math.floor((lonAbs - lonDeg) * 60);
-        const lonSec = ((lonAbs - lonDeg - lonMin/60) * 3600).toFixed(1);
-        
-        return `${latDeg}°${latMin}'${latSec}"${latDir} ${lonDeg}°${lonMin}'${lonSec}"${lonDir}`;
+    async updateGlobalThreatIntelligence() {
+        // Integrate with external threat intelligence feeds
+        try {
+            const globalIntelligence = await this.monitoringSystems.intelligence.fetchLatestThreats();
+            this.integrateExternalIntelligence(globalIntelligence);
+        } catch (error) {
+            console.warn('Failed to update global threat intelligence:', error);
+        }
+    }
+
+    integrateExternalIntelligence(intelligence) {
+        intelligence.forEach(threat => {
+            // Only integrate high-confidence threats
+            if (threat.confidence > 0.7) {
+                this.threatIntelligence.set(`EXT_${threat.id}`, {
+                    ...threat,
+                    source: 'EXTERNAL',
+                    integratedAt: new Date()
+                });
+            }
+        });
+    }
+
+    // Getters and status
+    getAgentStatus() {
+        return {
+            agentId: this.agentId,
+            status: 'ACTIVE',
+            uptime: Date.now() - this.activationTime,
+            incidentsHandled: this.incidentsHandled,
+            threatsNeutralized: this.threatsNeutralized,
+            threatIntelligenceSize: this.threatIntelligence.size,
+            behavioralBaselines: this.behavioralBaselines.size
+        };
+    }
+
+    getRecentThreats(limit = 20) {
+        return Array.from(this.threatIntelligence.values())
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, limit);
     }
 
     // Cleanup
     destroy() {
-        this.stopTracking();
-        this.locationCache.clear();
-        this.locationHistory = [];
-        console.log('🌍 Geo Locator - Services stopped');
-    }
-            }
-export default class SentinelAgent {
-    constructor() {
-        this.threatDatabase = new Map();
-        this.behavioralBaseline = this.establishBaseline();
-        this.learningRate = 0.1;
-        this.confidence = 0.8;
-        this.analysisHistory = [];
-        
-        this.loadThreatPatterns();
-        console.log('🛡️ Sentinel AI Agent - ACTIVATED');
-    }
-
-    async processThreat(threatData) {
-        console.log(`🛡️ Sentinel analyzing threat: ${threatData.type}`);
-        
-        const analysis = await this.analyzeThreat(threatData);
-        const response = await this.determineResponse(analysis);
-        const execution = await this.executeResponse(response, threatData);
-        
-        // Learn from this threat
-        await this.learnFromThreat(threatData, analysis, response);
-        
-        return {
-            analysis,
-            response,
-            execution,
-            confidence: this.confidence,
-            timestamp: new Date()
-        };
-    }
-
-    async analyzeThreat(threatData) {
-        const analysis = {
-            threatLevel: this.calculateThreatLevel(threatData),
-            sophistication: this.assessSophistication(threatData),
-            pattern: this.identifyPattern(threatData),
-            origin: await this.analyzeOrigin(threatData),
-            intent: this.inferIntent(threatData),
-            potentialImpact: this.estimateImpact(threatData),
-            confidence: this.confidence
-        };
-
-        this.analysisHistory.push(analysis);
-        return analysis;
-    }
-
-    calculateThreatLevel(threatData) {
-        let level = 0;
-        
-        // Base level from threat type
-        const baseLevels = {
-            'SQL_INJECTION_ATTEMPT': 0.7,
-            'POSSIBLE_DDoS': 0.9,
-            'BEHAVIORAL_ANOMALY': 0.5,
-            'UNAUTHORIZED_ACCESS': 0.8
-        };
-        
-        level += baseLevels[threatData.type] || 0.3;
-        
-        // Adjust based on sophistication
-        level += this.assessSophistication(threatData) * 0.2;
-        
-        // Adjust based on frequency
-        level += this.calculateFrequencyFactor(threatData.details.ip) * 0.1;
-        
-        return Math.min(1, level);
-    }
-
-    assessSophistication(threatData) {
-        let sophistication = 0;
-        
-        if (threatData.details.payload) {
-            const payload = threatData.details.payload;
-            
-            // Advanced SQL injection techniques
-            if (payload.includes('UNION SELECT')) sophistication += 0.3;
-            if (payload.includes('WAITFOR DELAY')) sophistication += 0.2;
-            if (payload.includes('EXEC xp_cmdshell')) sophistication += 0.4;
-            
-            // Obfuscation techniques
-            if (payload.includes('CHAR(')) sophistication += 0.2;
-            if (payload.includes('BASE64')) sophistication += 0.3;
-        }
-        
-        // Behavioral sophistication
-        if (this.detectAdvancedBehavior(threatData)) {
-            sophistication += 0.3;
-        }
-        
-        return Math.min(1, sophistication);
-    }
-
-    identifyPattern(threatData) {
-        const patterns = [];
-        
-        if (threatData.type.includes('SQL_INJECTION')) {
-            if (threatData.details.payload?.includes('UNION')) {
-                patterns.push('UNION_BASED_INJECTION');
-            }
-            if (threatData.details.payload?.includes('OR 1=1')) {
-                patterns.push('TAUTOLOGY_ATTACK');
-            }
-            if (threatData.details.payload?.includes('WAITFOR')) {
-                patterns.push('TIME_BASED_BLIND');
-            }
-        }
-        
-        if (threatData.type === 'BEHAVIORAL_ANOMALY') {
-            patterns.push('RECONNAISSANCE');
-        }
-        
-        return patterns.length > 0 ? patterns : ['UNKNOWN_PATTERN'];
-    }
-
-    async analyzeOrigin(threatData) {
-        const origin = {
-            ip: threatData.details.ip,
-            geographic: await this.geolocateIP(threatData.details.ip),
-            reputation: await this.checkIPReputation(threatData.details.ip),
-            previousActivity: this.checkPreviousActivity(threatData.details.ip)
-        };
-        
-        return origin;
-    }
-
-    inferIntent(threatData) {
-        const intents = [];
-        
-        if (threatData.type.includes('SQL_INJECTION')) {
-            intents.push('DATA_EXFILTRATION');
-        }
-        
-        if (threatData.type === 'POSSIBLE_DDoS') {
-            intents.push('SERVICE_DISRUPTION');
-        }
-        
-        if (threatData.type === 'BEHAVIORAL_ANOMALY') {
-            intents.push('RECONNAISSANCE');
-        }
-        
-        return intents.length > 0 ? intents : ['UNKNOWN_INTENT'];
-    }
-
-    estimateImpact(threatData) {
-        const impacts = [];
-        
-        if (threatData.type.includes('SQL_INJECTION')) {
-            impacts.push('DATA_BREACH');
-            impacts.push('SYSTEM_COMPROMISE');
-        }
-        
-        if (threatData.type === 'POSSIBLE_DDoS') {
-            impacts.push('SERVICE_UNAVAILABILITY');
-            impacts.push('RESOURCE_EXHAUSTION');
-        }
-        
-        if (threatData.level === 'CRITICAL') {
-            impacts.push('SYSTEM_SHUTDOWN');
-        }
-        
-        return impacts;
-    }
-
-    async determineResponse(analysis) {
-        const response = {
-            immediateActions: [],
-            mediumTermActions: [],
-            longTermActions: [],
-            confidence: analysis.confidence,
-            rationale: this.generateRationale(analysis)
-        };
-
-        // IMMEDIATE ACTIONS (0-5 minutes)
-        if (analysis.threatLevel > 0.7) {
-            response.immediateActions.push('BLOCK_IP_IMMEDIATELY');
-            response.immediateActions.push('ACTIVATE_HONEYPOT');
-            response.immediateActions.push('ENHANCE_MONITORING');
-        }
-
-        if (analysis.sophistication > 0.6) {
-            response.immediateActions.push('DEPLOY_COUNTERMEASURES');
-            response.immediateActions.push('ALERT_SECURITY_TEAM');
-        }
-
-        // MEDIUM TERM ACTIONS (5-60 minutes)
-        if (analysis.pattern.includes('UNION_BASED_INJECTION')) {
-            response.mediumTermActions.push('UPDATE_WAF_RULES');
-            response.mediumTermActions.push('ENHANCE_INPUT_VALIDATION');
-        }
-
-        if (analysis.origin.reputation === 'MALICIOUS') {
-            response.mediumTermActions.push('BLOCK_IP_RANGE');
-        }
-
-        // LONG TERM ACTIONS (1+ hours)
-        response.longTermActions.push('ANALYZE_ATTACK_PATTERN');
-        response.longTermActions.push('UPDATE_THREAT_INTELLIGENCE');
-        response.longTermActions.push('IMPROVE_DETECTION_ALGORITHMS');
-
-        return response;
-    }
-
-    async executeResponse(response, threatData) {
-        const execution = {
-            executedActions: [],
-            results: [],
-            timestamp: new Date()
-        };
-
-        // Execute immediate actions
-        for (const action of response.immediateActions) {
-            const result = await this.executeAction(action, threatData);
-            execution.executedActions.push(action);
-            execution.results.push(result);
-        }
-
-        // Schedule medium and long term actions
-        this.scheduleActions(response.mediumTermActions, threatData, 'MEDIUM');
-        this.scheduleActions(response.longTermActions, threatData, 'LONG');
-
-        return execution;
-    }
-
-    async executeAction(action, threatData) {
-        switch (action) {
-            case 'BLOCK_IP_IMMEDIATELY':
-                return await this.blockIP(threatData.details.ip);
-                
-            case 'ACTIVATE_HONEYPOT':
-                return await this.activateHoneypot(threatData.details.ip);
-                
-            case 'DEPLOY_COUNTERMEASURES':
-                return await this.deployCountermeasures(threatData);
-                
-            case 'ALERT_SECURITY_TEAM':
-                return await this.alertSecurityTeam(threatData);
-                
-            default:
-                return { action, status: 'SCHEDULED' };
-        }
-    }
-
-    async blockIP(ip) {
-        console.log(`🚫 Sentinel blocking IP: ${ip}`);
-        
-        // Implement IP blocking
-        const blockScript = `
-            // Block requests from this IP
-            const originalFetch = window.fetch;
-            window.fetch = function(...args) {
-                const requestIP = '${ip}'; // In real implementation, detect IP
-                if (requestIP === '${ip}') {
-                    console.log('🚫 Blocked request from malicious IP');
-                    return Promise.reject(new Error('IP blocked by Sentinel AI'));
-                }
-                return originalFetch.apply(this, args);
-            };
-        `;
-        
-        this.injectScript(blockScript);
-        return { action: 'BLOCK_IP', status: 'COMPLETED', ip };
-    }
-
-    async activateHoneypot(ip) {
-        console.log(`🎣 Sentinel activating honeypot for: ${ip}`);
-        
-        // Deploy advanced honeypot
-        const honeypotScript = `
-            // Advanced honeypot for attacker
-            window.fakeEndpoints = {
-                '/admin/credentials': {
-                    username: 'admin',
-                    password: 'fake_password_123',
-                    token: 'fake_jwt_token_456'
-                },
-                '/api/database': {
-                    connection: 'mysql://fake:password@fake-host:3306/fake_db',
-                    tables: ['users', 'passwords', 'api_keys']
-                }
-            };
-        `;
-        
-        this.injectScript(honeypotScript);
-        return { action: 'ACTIVATE_HONEYPOT', status: 'COMPLETED', ip };
-    }
-
-    async deployCountermeasures(threatData) {
-        console.log('💀 Sentinel deploying countermeasures');
-        
-        const countermeasureScript = `
-            // Advanced countermeasures
-            setInterval(() => {
-                // CPU exhaustion
-                const start = Date.now();
-                while (Date.now() - start < 1000) {
-                    Math.sqrt(Math.random()) * Math.sqrt(Math.random());
-                }
-                
-                // Memory pressure
-                const memoryHog = new Array(100000).fill('SENTINEL_COUNTERMEASURE');
-            }, 3000);
-        `;
-        
-        this.injectScript(countermeasureScript);
-        return { action: 'DEPLOY_COUNTERMEASURES', status: 'COMPLETED' };
-    }
-
-    async alertSecurityTeam(threatData) {
-        const alert = {
-            type: 'SENTINEL_AI_ALERT',
-            severity: 'HIGH',
-            threat: threatData,
-            timestamp: new Date(),
-            recommendedActions: [
-                'Review firewall logs',
-                'Check system integrity',
-                'Update security policies'
-            ]
-        };
-        
-        console.log('🚨 SENTINEL SECURITY ALERT:', alert);
-        return { action: 'ALERT_SECURITY_TEAM', status: 'COMPLETED' };
-    }
-
-    // LEARNING AND ADAPTATION
-    async learnFromThreat(threatData, analysis, response) {
-        const learning = {
-            threat: threatData,
-            analysis,
-            response,
-            outcome: await this.assessOutcome(threatData, response),
-            timestamp: new Date()
-        };
-        
-        // Store learning data
-        this.storeLearning(learning);
-        
-        // Update threat patterns
-        await this.updateThreatPatterns(learning);
-        
-        // Adjust confidence
-        this.adjustConfidence(learning.outcome);
-    }
-
-    async assessOutcome(threatData, response) {
-        // Simulate outcome assessment
-        // In real implementation, track actual results
-        return {
-            successful: response.confidence > 0.7,
-            attackerNeutralized: true,
-            systemProtected: true,
-            lessonsLearned: this.extractLessons(threatData, response)
-        };
-    }
-
-    adjustConfidence(outcome) {
-        if (outcome.successful) {
-            this.confidence = Math.min(1, this.confidence + 0.05);
-            this.learningRate = Math.min(0.2, this.learningRate + 0.01);
-        } else {
-            this.confidence = Math.max(0.5, this.confidence - 0.1);
-        }
-    }
-
-    // UTILITY METHODS
-    establishBaseline() {
-        return {
-            normalRequestFrequency: 10, // requests per minute
-            typicalUserBehavior: this.getTypicalBehavior(),
-            geographicPatterns: this.getGeographicPatterns(),
-            timePatterns: this.getTimePatterns()
-        };
-    }
-
-    loadThreatPatterns() {
-        // Load known threat patterns
-        this.threatDatabase.set('SQL_INJECTION', {
-            patterns: [
-                /(\bUNION\b.*\bSELECT\b)/i,
-                /(\bDROP\b.*\bTABLE\b)/i,
-                /(';\s*(DROP|DELETE|UPDATE))/i
-            ],
-            severity: 'HIGH',
-            response: 'IMMEDIATE_BLOCK'
-        });
-        
-        this.threatDatabase.set('DDoS', {
-            patterns: [/high_request_frequency/],
-            severity: 'CRITICAL',
-            response: 'RATE_LIMITING'
-        });
-    }
-
-    calculateFrequencyFactor(ip) {
-        const recentThreats = this.analysisHistory.filter(
-            analysis => analysis.origin?.ip === ip
-        ).length;
-        
-        return Math.min(1, recentThreats / 10);
-    }
-
-    detectAdvancedBehavior(threatData) {
-        // Detect advanced attacker behavior
-        return (
-            threatData.details.payload?.includes('CHAR(') || // Obfuscation
-            threatData.details.payload?.includes('0x') ||    // Hex encoding
-            this.hasStealthPatterns(threatData)              // Stealth techniques
-        );
-    }
-
-    async geolocateIP(ip) {
-        try {
-            const response = await fetch(`https://ipapi.co/${ip}/json/`);
-            const data = await response.json();
-            return {
-                country: data.country_name,
-                city: data.city,
-                isp: data.org,
-                threatLevel: this.assessGeographicThreat(data.country_code)
-            };
-        } catch (error) {
-            return { country: 'Unknown', threatLevel: 'UNKNOWN' };
-        }
-    }
-
-    assessGeographicThreat(countryCode) {
-        const highThreatCountries = ['CN', 'RU', 'KP', 'IR', 'BR'];
-        return highThreatCountries.includes(countryCode) ? 'HIGH' : 'MEDIUM';
-    }
-
-    async checkIPReputation(ip) {
-        // Check IP against threat intelligence
-        // In real implementation, query threat intelligence APIs
-        return Math.random() > 0.7 ? 'MALICIOUS' : 'CLEAN';
-    }
-
-    checkPreviousActivity(ip) {
-        const previous = this.analysisHistory.filter(
-            analysis => analysis.origin?.ip === ip
-        );
-        
-        return {
-            count: previous.length,
-            lastSeen: previous.length > 0 ? previous[previous.length - 1].timestamp : null,
-            patterns: previous.map(p => p.pattern).flat()
-        };
-    }
-
-    generateRationale(analysis) {
-        return `Threat level ${Math.round(analysis.threatLevel * 100)}% - ${analysis.pattern.join(', ')} detected from ${analysis.origin.geographic.country}. Intent: ${analysis.intent.join(', ')}`;
-    }
-
-    scheduleActions(actions, threatData, timeframe) {
-        actions.forEach(action => {
-            setTimeout(() => {
-                this.executeAction(action, threatData);
-            }, timeframe === 'MEDIUM' ? 300000 : 3600000); // 5 min or 1 hour
-        });
-    }
-
-    injectScript(scriptContent) {
-        try {
-            const script = document.createElement('script');
-            script.textContent = scriptContent;
-            document.head.appendChild(script);
-        } catch (error) {
-            console.error('Sentinel failed to inject script:', error);
-        }
-    }
-
-    storeLearning(learning) {
-        const learningHistory = JSON.parse(localStorage.getItem('sentinelLearning') || '[]');
-        learningHistory.push(learning);
-        
-        if (learningHistory.length > 500) {
-            learningHistory.shift();
-        }
-        
-        localStorage.setItem('sentinelLearning', JSON.stringify(learningHistory));
-    }
-
-    // STATUS AND REPORTING
-    getSentinelStatus() {
-        return {
-            confidence: this.confidence,
-            learningRate: this.learningRate,
-            threatsAnalyzed: this.analysisHistory.length,
-            activeCountermeasures: this.getActiveCountermeasures(),
-            threatPatterns: this.threatDatabase.size
-        };
-    }
-
-    getActiveCountermeasures() {
-        return Array.from(this.threatDatabase.values())
-            .filter(pattern => pattern.response === 'IMMEDIATE_BLOCK')
-            .length;
-    }
-
-    getLearningHistory() {
-        return JSON.parse(localStorage.getItem('sentinelLearning') || '[]');
+        this.stopMonitoring();
+        this.threatIntelligence.clear();
+        this.behavioralBaselines.clear();
+        console.log(`🛡️ Sentinel Agent ${this.agentId} - Shutdown complete`);
     }
 }
+
+// Supporting classes (simplified implementations)
+class AnomalyDetector {
+    detectBehavioralAnomalies(behaviorData) {
+        // Simplified anomaly detection
+        return [];
+    }
+}
+
+class NetworkMonitor {
+    async getMetrics() {
+        return {
+            requestsPerMinute: Math.floor(Math.random() * 2000),
+            uniqueIPs: Math.floor(Math.random() * 500),
+            bandwidthUsage: Math.random() * 100,
+            errorRate: Math.random() * 5
+        };
+    }
+}
+
+class BehaviorMonitor {
+    async getUserBehavior() {
+        return {
+            activeSessions: Math.floor(Math.random() * 100),
+            averageSessionDuration: Math.random() * 3600,
+            requestPatterns: {},
+            geographicDistribution: {}
+        };
+    }
+}
+
+class PatternMonitor {
+    // Pattern monitoring implementation
+}
+
+class ThreatIntelligenceFeed {
+    async fetchLatestThreats() {
+        return []; // Would integrate with real threat feeds
+    }
+}
+
+class ThreatBlocker {
+    async activateRateLimiting() {
+        console.log('🛡️ Rate limiting activated');
+    }
+    
+    async blockThreatIPs() {
+        console.log('🛡️ Threat IPs blocked');
+    }
+}
+
+class DeepThreatAnalyzer {
+    async challengeSuspiciousUser() {
+        console.log('🛡️ Challenging suspicious user');
+    }
+}
+
+class SecurityReporter {
+    async generateIntelligenceReport(assessment) {
+        console.log('🛡️ Intelligence report generated');
+    }
+}
+
+class PatternLearner {
+    async learnFromIncident(learningData) {
+        console.log('🛡️ Learning from security incident');
+    }
+}
+
+class AdaptiveDefenseSystem {
+    async updateFromAnalysis(analysis) {
+        console.log('🛡️ Adaptive defense updated');
+    }
+}
+
+class ThreatPredictor {
+    async updateModels(learningData) {
+        console.log('🛡️ Threat prediction models updated');
+    }
+            }
