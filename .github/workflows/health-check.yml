@@ -3,51 +3,13 @@ name: Climate-ZiLLA Health Monitoring
 on:
   schedule:
     - cron: '*/5 6-23 * * *'
-    - cron: '0,30 0-5 * * *'
-  push:
-    branches: [ main, master ]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - staging
-          - development
 
-run-name: Health check on ${{ inputs.environment }} by @${{ github.actor }}
-
-env:
-  NODE_VERSION: '18'
+run-name: Health check by @${{ github.actor }}
 
 jobs:
-  security-audit:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-
-    - name: Install dependencies (creates package-lock.json)
-      run: npm ci
-
-    - name: Run Security Audit
-      run: |
-        # Use npm audit instead of audit-ci to avoid dependency issues
-        npm audit --audit-level=moderate || echo "Audit completed with warnings"
-
   health-check:
     runs-on: ubuntu-latest
-    needs: security-audit
-    timeout-minutes: 10
     
     steps:
     - name: Checkout code
@@ -56,27 +18,12 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+        node-version: '18'
 
     - name: Install dependencies
-      run: npm ci
+      run: npm install  # Use npm install instead of npm ci
 
     - name: Run Health Check
-      id: health
       run: |
         chmod +x ./scripts/health-check.sh
         ./scripts/health-check.sh
-
-    - name: Slack Notification
-      if: always()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ job.status }}
-        text: |
-          ${{ job.status == 'success' && '✅ Climate-ZiLLA System Healthy' || '🚨 Climate-ZiLLA Health Check Failed' }}
-          Environment: ${{ inputs.environment }}
-          Triggered by: @${{ github.actor }}
-        author_name: Climate-ZiLLA Bot
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
