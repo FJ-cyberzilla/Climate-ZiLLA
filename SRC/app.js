@@ -3,7 +3,17 @@ import BackgroundManager from './background-engine/background-manager.js';
 import ClimateConsciousness from './ai-climate-entity/climate-consciousness.js';
 import ThreatDetector from './security-system/threat-detector.js';
 import GeoLocator from './utils/geo-locator.js';
+import HealthCheck from './health-check.js';
 
+// Add this after initializing your climateEntity
+const healthCheck = new HealthCheck(climateEntity);
+
+// Add health check routes
+app.get('/health', healthCheck.getHealthCheckMiddleware());
+app.get('/api/health', healthCheck.getHealthCheckMiddleware());
+app.get('/status', (req, res) => {
+    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 // SVG Icons as components
 const Cloud = ({ size = 24, className = "" }) => h('svg', { 
     xmlns: 'http://www.w3.org/2000/svg', 
