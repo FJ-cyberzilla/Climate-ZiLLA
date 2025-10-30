@@ -1,79 +1,23 @@
 {
   "name": "climate-zilla-enterprise",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "Climate-ZiLLA© - Enterprise Weather & Security Platform",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server/server.js",
-    "production": "NODE_ENV=production node server/server.js",
-    "server": "cd server && npm run dev",
-    "client": "vite --host",
-    "dev:full": "concurrently \"npm run server\" \"npm run client\"",
-    "install-all": "npm install && cd server && npm install",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "lint": "eslint src/ server/ --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint src/ server/ --ext .js,.jsx,.ts,.tsx --fix",
-    "security-audit": "npm audit --audit-level=high",
-    "security-fix": "npm audit fix",
-    "build:production": "npm run build && npm run security-audit",
-    "deploy": "npm run build:production && pm2 reload ecosystem.config.js",
-    "health-check": "curl -f http://localhost:3000/health || exit 1",
-    "clean": "rm -rf node_modules dist build",
-    "postinstall": "npm run security-audit"
+    "install-all": "npm install && cd server && npm install"
   },
+  "author": "FJ-cyberzilla <cyberzilla.systems@gmail.com>",
+  "license": "PROPRIETARY",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "vite": "^7.1.12"
+    "vite": "^4.4.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.0.0",
-    "vite-plugin-checker": "^0.5.6",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "eslint": "^8.45.0",
-    "eslint-plugin-react": "^7.32.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.3",
-    "vitest": "^0.34.0",
-    "@vitest/ui": "^0.34.0",
-    "concurrently": "^8.2.0",
-    "cross-env": "^7.0.3"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/FJ-cyberzilla/climate-zilla.git"
-  },
-  "keywords": [
-    "weather",
-    "climate",
-    "ai",
-    "security",
-    "astronomy",
-    "enterprise"
-  ],
-  "author": "FJ-cyberzilla <cyberzilla.systems@gmail.com>",
-  "license": "PROPRIETARY",
-  "private": true
+    "@vitejs/plugin-react": "^4.0.0"
+  }
 }
