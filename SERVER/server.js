@@ -9,7 +9,151 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import dotenv from 'dotenv';
 
+// Import subsystems
+import HealthCheck from './health-check.js';
+import ClimateEntity from './ai-climate-entity/climate-entity.js';
+
+// Load environment variables
+dotenv.config();
+
+class ClimateZillaServer {
+    constructor() {
+        this.app = express();
+        this.port = process.env.PORT || 3000;
+        this.climateEntity = new ClimateEntity();
+        this.healthCheck = new HealthCheck(this.climateEntity);
+        
+        this.setupMiddleware();
+        this.setupRoutes();
+        this.initializeSystems();
+    }
+
+    setupMiddleware() {
+        this.app.use(helmet());
+        this.app.use(cors());
+        this.app.use(compression());
+        this.app.use(express.json({ limit: '10mb' }));
+        this.app.use(express.urlencoded({ extended: true }));
+    }
+
+    setupRoutes() {
+        // Health checks
+        this.app.get('/health', this.healthCheck.getHealthCheckMiddleware());
+        this.app.get('/api/health', this.healthCheck.getHealthCheckMiddleware());
+        this.app.get('/status', (req, res) => {
+            res.json({ 
+                status: 'OK', 
+                timestamp: new Date().toISOString(),
+                version: '1.0.0'
+            });
+        });
+
+        // Main API routes
+        this.app.get('/api/weather/:location', this.getWeatherData.bind(this));
+        this.app.get('/api/climate-insights', this.getClimateInsights.bind(this));
+        this.app.post('/api/analyze', this.analyzeClimateData.bind(this));
+
+        // Root endpoint
+        this.app.get('/', (req, res) => {
+            res.json({
+                message: '🌍 Climate-ZiLLA AI System',
+                version: '1.0.0',
+                endpoints: {
+                    health: '/health',
+                    weather: '/api/weather/:location',
+                    insights: '/api/climate-insights',
+                    analyze: '/api/analyze'
+                }
+            });
+        });
+
+        // 404 handler
+        this.app.use('*', (req, res) => {
+            res.status(404).json({ error: 'Endpoint not found' });
+        });
+    }
+
+    async getWeatherData(req, res) {
+        try {
+            const { location } = req.params;
+            const weatherData = await this.climateEntity.getWeatherAnalysis(location);
+            res.json(weatherData);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getClimateInsights(req, res) {
+        try {
+            const insights = await this.climateEntity.getClimateInsights();
+            res.json(insights);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async analyzeClimateData(req, res) {
+        try {
+            const { data, analysisType } = req.body;
+            const result = await this.climateEntity.analyzeData(data, analysisType);
+            res.json(result);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async initializeSystems() {
+        console.log('🚀 Initializing Climate-ZiLLA systems...');
+        
+        try {
+            await this.climateEntity.initialize();
+            console.log('✅ All systems initialized successfully');
+        } catch (error) {
+            console.error('❌ System initialization failed:', error);
+            process.exit(1);
+        }
+    }
+
+    start() {
+        this.server = this.app.listen(this.port, () => {
+            console.log(`🌍 Climate-ZiLLA server running on port ${this.port}`);
+            console.log(`🔗 Health check: http://localhost:${this.port}/health`);
+            console.log(`📊 Status: http://localhost:${this.port}/status`);
+        });
+    }
+
+    async shutdown() {
+        console.log('🛑 Shutting down Climate-ZiLLA...');
+        if (this.server) {
+            this.server.close();
+        }
+        await this.climateEntity.shutdown();
+        console.log('✅ Climate-ZiLLA shutdown complete');
+    }
+}
+
+// Start the server
+const server = new ClimateZillaServer();
+server.start();
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+    await server.shutdown();
+    process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+    await server.shutdown();
+    process.exit(0);
+});
+
+export default ClimateZillaServer;
 // REAL SECURITY MIDDLEWARE
 app.use(helmet({
     contentSecurityPolicy: {
