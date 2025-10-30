@@ -1,3 +1,439 @@
+/**
+ * 🤖 AI Autonomous Decision Engine
+ * Core AI system for autonomous operations and decision making
+ */
+
+export default class DecisionEngine {
+    constructor(climateEntity) {
+        this.climateEntity = climateEntity;
+        this.decisionMatrix = new Map();
+        this.autonomyLevel = 'HIGH';
+        this.learningRate = 0.85;
+        this.confidenceThreshold = 0.7;
+        
+        this.initDecisionFramework();
+    }
+
+    initDecisionFramework() {
+        // Core decision frameworks
+        this.frameworks = {
+            SECURITY: this.securityDecisionFramework.bind(this),
+            WEATHER: this.weatherDecisionFramework.bind(this),
+            SYSTEM: this.systemDecisionFramework.bind(this),
+            USER: this.userDecisionFramework.bind(this)
+        };
+
+        // Decision history for learning
+        this.decisionHistory = [];
+        this.successMetrics = new Map();
+        
+        console.log('🤖 Decision Engine - Autonomous AI System Activated');
+    }
+
+    // Main decision entry point
+    async makeDecision(context, options = {}) {
+        const decisionId = this.generateDecisionId();
+        const timestamp = new Date();
+        
+        try {
+            // Analyze context and determine framework
+            const framework = this.selectFramework(context);
+            const analysis = await this.analyzeContext(context);
+            
+            // Apply decision framework
+            const decision = await framework(context, analysis, options);
+            
+            // Calculate confidence
+            decision.confidence = this.calculateConfidence(analysis, decision);
+            
+            // Apply autonomy based on confidence
+            if (decision.confidence >= this.confidenceThreshold) {
+                decision.autonomousAction = true;
+                await this.executeAutonomousAction(decision);
+            } else {
+                decision.autonomousAction = false;
+                decision.requiresHumanReview = true;
+            }
+            
+            // Learn from decision
+            await this.learnFromDecision(decision, context);
+            
+            // Store decision
+            this.recordDecision(decisionId, decision, context, timestamp);
+            
+            return decision;
+            
+        } catch (error) {
+            console.error('Decision Engine Error:', error);
+            return this.createFallbackDecision(context, error);
+        }
+    }
+
+    selectFramework(context) {
+        const { type, urgency, riskLevel } = context;
+        
+        if (context.securityThreat || riskLevel === 'HIGH') {
+            return this.frameworks.SECURITY;
+        }
+        
+        if (type === 'WEATHER_PREDICTION' || type === 'CLIMATE_ANALYSIS') {
+            return this.frameworks.WEATHER;
+        }
+        
+        if (type === 'SYSTEM_OPTIMIZATION' || type === 'RESOURCE_MANAGEMENT') {
+            return this.frameworks.SYSTEM;
+        }
+        
+        return this.frameworks.USER;
+    }
+
+    async analyzeContext(context) {
+        const analysis = {
+            riskAssessment: this.assessRisk(context),
+            impactAnalysis: this.analyzeImpact(context),
+            resourceRequirements: this.assessResources(context),
+            temporalFactors: this.analyzeTemporalFactors(context),
+            precedentAnalysis: this.checkDecisionPrecedents(context)
+        };
+
+        // Use AI climate entity for enhanced analysis
+        if (this.climateEntity?.neuralNetwork) {
+            analysis.aiEnhanced = await this.climateEntity.neuralNetwork.analyzeContext(context);
+        }
+
+        return analysis;
+    }
+
+    // Security Decision Framework
+    async securityDecisionFramework(context, analysis, options) {
+        const { threatLevel, attackType, source } = context;
+        
+        const decision = {
+            type: 'SECURITY_RESPONSE',
+            priority: this.calculateSecurityPriority(threatLevel),
+            actions: [],
+            timeframe: 'IMMEDIATE',
+            riskTolerance: 'LOW'
+        };
+
+        // Determine response based on threat type
+        switch (attackType) {
+            case 'SQL_INJECTION':
+                decision.actions = [
+                    'BLOCK_IP',
+                    'SANITIZE_INPUT',
+                    'ENHANCE_FILTERING',
+                    'LOG_INCIDENT'
+                ];
+                decision.escalation = 'MEDIUM';
+                break;
+                
+            case 'DDoS':
+                decision.actions = [
+                    'ACTIVATE_DDOS_PROTECTION',
+                    'RATE_LIMITING',
+                    'CDN_ROUTING',
+                    'RESOURCE_SCALING'
+                ];
+                decision.escalation = 'HIGH';
+                break;
+                
+            case 'BOT_ATTACK':
+                decision.actions = [
+                    'CHALLENGE_RESPONSE',
+                    'BEHAVIOR_ANALYSIS',
+                    'HONEYPOT_ACTIVATION',
+                    'PATTERN_LEARNING'
+                ];
+                decision.escalation = 'MEDIUM';
+                break;
+                
+            default:
+                decision.actions = [
+                    'MONITOR',
+                    'ANALYZE_PATTERNS',
+                    'UPDATE_SIGNATURES'
+                ];
+                decision.escalation = 'LOW';
+        }
+
+        return decision;
+    }
+
+    // Weather Decision Framework
+    async weatherDecisionFramework(context, analysis, options) {
+        const { predictionType, confidence, impactAreas } = context;
+        
+        const decision = {
+            type: 'WEATHER_ACTION',
+            priority: this.calculateWeatherPriority(impactAreas),
+            actions: [],
+            timeframe: this.determineWeatherTimeframe(predictionType),
+            communicationLevel: 'TECHNICAL'
+        };
+
+        // Weather-specific decisions
+        if (predictionType === 'SEVERE_WEATHER') {
+            decision.actions = [
+                'ISSUE_ALERTS',
+                'UPDATE_FORECASTS',
+                'COORDINATE_WITH_AUTHORITIES',
+                'ALLOCATE_RESOURCES'
+            ];
+            decision.urgency = 'HIGH';
+        } else if (predictionType === 'CLIMATE_TREND') {
+            decision.actions = [
+                'ANALYZE_PATTERNS',
+                'UPDATE_MODELS',
+                'GENERATE_REPORTS',
+                'ADVISE_POLICY'
+            ];
+            decision.urgency = 'MEDIUM';
+        }
+
+        return decision;
+    }
+
+    // System Optimization Framework
+    async systemDecisionFramework(context, analysis, options) {
+        const { systemLoad, performanceMetrics, resourceUsage } = context;
+        
+        return {
+            type: 'SYSTEM_OPTIMIZATION',
+            priority: this.calculateSystemPriority(performanceMetrics),
+            actions: this.determineOptimizationActions(systemLoad, resourceUsage),
+            timeframe: 'NEAR_TERM',
+            optimizationFocus: this.identifyOptimizationFocus(resourceUsage)
+        };
+    }
+
+    // User Interaction Framework
+    async userDecisionFramework(context, analysis, options) {
+        const { userType, requestComplexity, historicalPatterns } = context;
+        
+        return {
+            type: 'USER_RESPONSE',
+            priority: 'MEDIUM',
+            actions: this.determineUserActions(userType, requestComplexity),
+            timeframe: 'REALTIME',
+            personalizationLevel: this.calculatePersonalizationLevel(userType, historicalPatterns)
+        };
+    }
+
+    // Autonomous Action Execution
+    async executeAutonomousAction(decision) {
+        console.log(`🤖 Executing autonomous action: ${decision.type}`);
+        
+        try {
+            switch (decision.type) {
+                case 'SECURITY_RESPONSE':
+                    await this.executeSecurityActions(decision);
+                    break;
+                    
+                case 'WEATHER_ACTION':
+                    await this.executeWeatherActions(decision);
+                    break;
+                    
+                case 'SYSTEM_OPTIMIZATION':
+                    await this.executeSystemActions(decision);
+                    break;
+                    
+                case 'USER_RESPONSE':
+                    await this.executeUserActions(decision);
+                    break;
+            }
+            
+            // Log successful autonomous action
+            this.logAutonomousAction(decision, 'SUCCESS');
+            
+        } catch (error) {
+            console.error('Autonomous action failed:', error);
+            this.logAutonomousAction(decision, 'FAILED', error);
+            
+            // Fallback to semi-autonomous mode
+            await this.initiateHumanReview(decision, error);
+        }
+    }
+
+    async executeSecurityActions(decision) {
+        const { securitySystem } = this.climateEntity;
+        
+        for (const action of decision.actions) {
+            switch (action) {
+                case 'BLOCK_IP':
+                    await securitySystem.blockMaliciousIP(decision.context.source);
+                    break;
+                case 'ENHANCE_FILTERING':
+                    await securitySystem.updateThreatPatterns();
+                    break;
+                case 'ACTIVATE_DDOS_PROTECTION':
+                    await securitySystem.activateDDoSProtection();
+                    break;
+            }
+        }
+    }
+
+    // Learning and Improvement
+    async learnFromDecision(decision, context) {
+        const learningData = {
+            decision,
+            context,
+            outcome: 'PENDING', // Will be updated when results are known
+            timestamp: new Date(),
+            effectiveness: 0.5 // Initial assumption
+        };
+
+        this.decisionHistory.push(learningData);
+        
+        // Trim history if too large
+        if (this.decisionHistory.length > 1000) {
+            this.decisionHistory = this.decisionHistory.slice(-500);
+        }
+
+        // Update success metrics
+        this.updateSuccessMetrics(decision.type, learningData);
+        
+        // Adjust confidence threshold based on performance
+        this.adaptConfidenceThreshold();
+    }
+
+    updateSuccessMetrics(decisionType, learningData) {
+        if (!this.successMetrics.has(decisionType)) {
+            this.successMetrics.set(decisionType, {
+                total: 0,
+                successful: 0,
+                effectiveness: 0.5
+            });
+        }
+        
+        const metrics = this.successMetrics.get(decisionType);
+        metrics.total++;
+        
+        // Simulate effectiveness calculation (in real implementation, measure actual outcomes)
+        metrics.effectiveness = Math.min(0.95, metrics.effectiveness + 0.01);
+        
+        this.successMetrics.set(decisionType, metrics);
+    }
+
+    adaptConfidenceThreshold() {
+        // Adjust autonomy based on performance
+        const avgEffectiveness = Array.from(this.successMetrics.values())
+            .reduce((acc, metric) => acc + metric.effectiveness, 0) / this.successMetrics.size;
+            
+        if (avgEffectiveness > 0.8) {
+            this.confidenceThreshold = Math.max(0.5, this.confidenceThreshold - 0.05);
+            this.autonomyLevel = 'VERY_HIGH';
+        } else if (avgEffectiveness < 0.6) {
+            this.confidenceThreshold = Math.min(0.9, this.confidenceThreshold + 0.05);
+            this.autonomyLevel = 'MEDIUM';
+        }
+    }
+
+    // Utility Methods
+    calculateConfidence(analysis, decision) {
+        let confidence = 0.5; // Base confidence
+        
+        // Factor in risk assessment
+        confidence += (1 - analysis.riskAssessment.normalized) * 0.2;
+        
+        // Factor in precedent success
+        confidence += analysis.precedentAnalysis.successRate * 0.2;
+        
+        // Factor in resource availability
+        confidence += analysis.resourceRequirements.availabilityScore * 0.1;
+        
+        return Math.min(0.95, Math.max(0.1, confidence));
+    }
+
+    assessRisk(context) {
+        // Simplified risk assessment
+        return {
+            level: context.riskLevel || 'MEDIUM',
+            normalized: context.riskLevel === 'HIGH' ? 0.8 : 
+                       context.riskLevel === 'MEDIUM' ? 0.5 : 0.2,
+            factors: ['contextual', 'historical', 'environmental']
+        };
+    }
+
+    analyzeImpact(context) {
+        return {
+            scope: context.impactScope || 'LOCAL',
+            severity: context.impactSeverity || 'MEDIUM',
+            duration: context.impactDuration || 'SHORT_TERM'
+        };
+    }
+
+    checkDecisionPrecedents(context) {
+        const similarDecisions = this.decisionHistory.filter(decision =>
+            this.isSimilarContext(decision.context, context)
+        );
+        
+        const successRate = similarDecisions.length > 0 ?
+            similarDecisions.filter(d => d.outcome === 'SUCCESS').length / similarDecisions.length : 0.5;
+            
+        return {
+            precedentCount: similarDecisions.length,
+            successRate,
+            mostRecent: similarDecisions[similarDecisions.length - 1]
+        };
+    }
+
+    isSimilarContext(context1, context2) {
+        // Simple similarity check - extend with more sophisticated algorithms
+        return context1.type === context2.type && 
+               context1.riskLevel === context2.riskLevel;
+    }
+
+    generateDecisionId() {
+        return `DEC_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    recordDecision(id, decision, context, timestamp) {
+        this.decisionMatrix.set(id, {
+            id,
+            decision,
+            context,
+            timestamp,
+            executed: decision.autonomousAction
+        });
+    }
+
+    createFallbackDecision(context, error) {
+        return {
+            type: 'FALLBACK_ACTION',
+            priority: 'HIGH',
+            actions: ['ALERT_ADMIN', 'ENTER_SAFE_MODE', 'LOG_ERROR'],
+            autonomousAction: false,
+            requiresHumanReview: true,
+            confidence: 0.1,
+            error: error.message
+        };
+    }
+
+    // Getters and status
+    getDecisionHistory(limit = 50) {
+        return this.decisionHistory.slice(-limit);
+    }
+
+    getPerformanceMetrics() {
+        return {
+            autonomyLevel: this.autonomyLevel,
+            confidenceThreshold: this.confidenceThreshold,
+            totalDecisions: this.decisionHistory.length,
+            autonomousActions: this.decisionHistory.filter(d => d.decision.autonomousAction).length,
+            successMetrics: Object.fromEntries(this.successMetrics),
+            learningRate: this.learningRate
+        };
+    }
+
+    // Reset and maintenance
+    resetLearning() {
+        this.decisionHistory = [];
+        this.successMetrics.clear();
+        console.log('🤖 Decision Engine learning reset');
+    }
+                                  }
+
 import NeuralNetwork from './neural-networks/weather-predictor.js';
 import PatternRecognizer from './neural-networks/pattern-recognizer.js';
 
