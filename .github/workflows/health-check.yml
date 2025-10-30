@@ -1,50 +1,129 @@
 name: Climate-ZiLLA Health Monitoring
 
 on:
-  push:
-    branches: [ main, master ]
+  # Single event with schedule
   schedule:
-    - cron: '*/15 6-22 * * *'  # Every 15 min, 6 AM - 10 PM
-    - cron: '0 23-5 * * *'     # Hourly, 11 PM - 5 AM
+    # POSIX cron syntax with 5 fields as per GitHub Docs
+    - cron: '*/5 6-23 * * *'    # Every 5 minutes, hours 6-23
+    - cron: '0,30 0-5 * * *'    # At minutes 0 and 30, hours 0-5
+  
+  # Multiple events as per GitHub Docs
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - '!src/tests/**'
+  
+  # Workflow dispatch with inputs
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      check_type:
+        description: 'Type of health check'
+        required: false
+        default: 'standard'
+        type: choice
+        options:
+          - quick
+          - standard
+          - comprehensive
+
+# Official run-name syntax from GitHub Docs
+run-name: Health check on ${{ inputs.environment }} by @${{ github.actor }}
 
 env:
   NODE_VERSION: '18'
+  HEALTH_CHECK_TIMEOUT: '30'
 
 jobs:
-  health-check:
+  health-monitoring:
+    # Required: runs-on specification
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    
+    # Strategy for matrix builds (optional)
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    
+    # Environment settings (optional)
+    environment: 
+      name: ${{ inputs.environment }}
+      url: https://${{ inputs.environment }}.climate-zilla.com
+    
+    # Job timeout
+    timeout-minutes: 30
     
     steps:
+    # Step 1: Checkout repository
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Setup Node.js
+      with:
+        fetch-depth: 1
+    
+    # Step 2: Setup Node.js
+    - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ env.NODE_VERSION }}
+        node-version: ${{ matrix.node-version }}
         cache: 'npm'
-
+    
+    # Step 3: Install dependencies
     - name: Install dependencies
       run: npm ci
-
-    - name: Run Health Check
-      id: health
+    
+    # Step 4: Run tests (conditional)
+    - name: Run tests
+      if: github.event_name == 'push'
+      run: npm test
+    
+    # Step 5: Security audit
+    - name: Security audit
+      run: |
+        npm audit --audit-level=moderate
+        npm audit fix --dry-run
+    
+    # Step 6: Health check (main task)
+    - name: Run ${{ inputs.check_type }} health check
+      id: health-check
+      env:
+        TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        CHECK_TYPE: ${{ inputs.check_type }}
       run: |
         chmod +x ./scripts/health-check.sh
         ./scripts/health-check.sh
-
-    - name: Slack Notification
+    
+    # Step 7: Upload artifacts (optional)
+    - name: Upload health check results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: health-check-results
+        path: |
+          health-report.json
+        retention-days: 7
+    
+    # Step 8: Slack notification
+    - name: Notify Slack
       if: always()
       uses: 8398a7/action-slack@v3
       with:
-        status: ${{ steps.health.outcome }}
+        status: ${{ job.status }}
         text: |
-          ${{ steps.health.outcome == 'success' && '✅ Climate-ZiLLA System Healthy' || '🚨 Climate-ZiLLA Health Check Failed' }}
-          Event: ${{ github.event_name }}
-          Branch: ${{ github.ref_name }}
-        author_name: Climate-ZiLLA Bot
-        username: github-actions
+          ${{ job.status == 'success' && '✅ Climate-ZiLLA Healthy' || '🚨 Climate-ZiLLA Issues' }}
+          Environment: ${{ inputs.environment }}
+          Check Type: ${{ inputs.check_type }}
+          Triggered by: @${{ github.actor }}
+        author_name: GitHub Actions
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
