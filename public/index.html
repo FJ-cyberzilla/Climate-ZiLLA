@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Climate-ZiLLA© - Enterprise Weather & Security Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom": "https://esm.sh/react-dom@18.2.0",
+            "./src/": "./src/"
+        }
+    }
+    </script>
+</head>
+<body class="m-0 p-0 overflow-hidden">
+    <div id="root"></div>
+    <canvas id="weatherCanvas"></canvas>
+    
+    <script type="module">
+        import { createElement as h, useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import ClimateZillaApp from './src/app.js';
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(h(ClimateZillaApp));
+    </script>
+</body>
+</html>
