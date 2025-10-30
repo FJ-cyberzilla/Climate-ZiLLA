@@ -1,0 +1,53 @@
+name: Climate-ZiLLA Health Monitoring
+
+on:
+  schedule:
+    - cron: '*/5 6-23 * * *'
+    - cron: '0,30 0-5 * * *'
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+run-name: Health check by @${{ github.actor }}
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Basic Security Check
+      run: npm audit --audit-level=critical || true
+
+    - name: Run Health Check
+      id: health
+      run: |
+        chmod +x ./scripts/health-check.sh
+        ./scripts/health-check.sh
+
+    - name: Slack Notification
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ steps.health.outcome }}
+        text: |
+          ${{ steps.health.outcome == 'success' && '✅ Climate-ZiLLA Healthy' || '🚨 Climate-ZiLLA Issues' }}
+          Triggered by: @${{ github.actor }}
+        author_name: Climate-ZiLLA Bot
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
